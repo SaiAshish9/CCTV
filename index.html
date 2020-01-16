@@ -1,0 +1,211 @@
+<!-- <!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <title>CCTV</title>
+  </head>
+  <body>
+
+<img id="image" />
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.dev.js"></script>
+
+
+<script>
+
+const io=io.connect('http://localhost:3000')
+socket.on('image',(data)=>{
+  console.log('data',data)
+  const imageELement=  document.getElementById('image')
+  imageELement.src=`data:image/jpeg;base64,${image}`
+})
+
+
+</script>
+
+  </body>
+</html> -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MediaCapture and Streams API</title>
+    <meta name="viewport" content="width=device-width">
+</head>
+
+
+
+    <script
+      src="https://code.jquery.com/jquery-3.4.1.js"
+      integrity="sha256-WpOohJOqMqqyKL9FccASB9O0KwACQJpFTUBLTYOVvVU="
+      crossorigin="anonymous"></script>
+
+<link href="https://fonts.googleapis.com/css?family=Montserrat|Ubuntu" rel="stylesheet">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+<script defer src="https://use.fontawesome.com/releases/v5.0.7/js/all.js"></script>
+
+<body>
+
+<div class="container-fluid" style="text-align: center;position:absolute;top:0px;bottom:0px;left:0px;right:0px;">
+
+<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;margin-top:30vh;">
+
+<form  action="/upload"  method="post" enctype="multipart/form-data">
+
+  <p><button class="btn btn-success" id="btnStart">Start Recording</button><br/>
+  <button class="btn btn-danger" id="btnStop">Stop Recording</button></p>
+
+  <video  style="max-width:400px" id="vid1" controls></video>
+
+  <video name="upload" style="max-width:400px" id="vid2" controls></video>
+
+<br/>
+
+  <button style="margin-top:15px" class="btn btn-primary" id="upload">Upload</button></p>
+
+
+</form>
+
+
+
+
+
+</div>
+
+
+
+
+
+</div>
+
+
+
+
+
+    <script>
+      var localStream;
+
+        let constraintObj = {
+            audio: true,
+            video: {
+                facingMode: "user",
+                width: { min: 640, ideal: 1280, max: 1920 },
+                height: { min: 480, ideal: 720, max: 1080 }
+            }
+        };
+
+        if (navigator.mediaDevices === undefined) {
+            navigator.mediaDevices = {};
+            navigator.mediaDevices.getUserMedia = function(constraintObj) {
+
+                let getUserMedia = navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+                if (!getUserMedia) {
+                    return Promise.reject(new Error('getUserMedia is not implemented in this browser'));
+                }
+                return new Promise(function(resolve, reject) {
+                    getUserMedia.call(navigator, constraintObj, resolve, reject);
+                });
+            }
+        }else{
+            navigator.mediaDevices.enumerateDevices()
+            .then(devices => {
+                devices.forEach(device=>{
+                    // console.log(device.kind.toUpperCase(), device.label);
+                })
+            })
+            .catch(err=>{
+                console.log(err.name, err.message);
+            })
+        }
+
+        $('#btnStart').click(function(e){
+
+          navigator.mediaDevices.getUserMedia(constraintObj)
+          .then(function(mediaStreamObj) {
+              let video = document.querySelector('video');
+              if ("srcObject" in video) {
+                  video.srcObject = mediaStreamObj;
+                  localStream=mediaStreamObj
+              } else {
+                  video.src = window.URL.createObjectURL(mediaStreamObj);
+              }
+
+              video.onloadedmetadata = function(ev) {
+                  video.play();
+              };
+
+              let start = document.getElementById('btnStart');
+              let stop = document.getElementById('btnStop');
+              let vidSave = document.getElementById('vid2');
+              let mediaRecorder = new MediaRecorder(mediaStreamObj);
+              let chunks = [];
+
+                  mediaRecorder.start();
+
+              stop.addEventListener('click', (ev)=>{
+                  mediaRecorder.stop();
+                  video.src=""
+                  video.pause();
+                  localStream.getVideoTracks()[0].stop();
+
+                  // console.log(mediaRecorder.state);
+              });
+              mediaRecorder.ondataavailable = function(ev) {
+                  chunks.push(ev.data);
+              }
+              mediaRecorder.onstop = (ev)=>{
+                localStream.getVideoTracks()[0].stop();
+                localStream.getAudioTracks()[0].stop();
+                  let blob = new Blob(chunks, { 'type' : 'video/mp4;' });
+                  chunks = [];
+                  let videoURL = window.URL.createObjectURL(blob);
+              console.log(videoURL);
+              const a=document.createElement('a')
+              a.href=videoURL
+              a.download='my.mp4'
+              // a.click()
+              // a.remove()
+                  video.pause();
+                  video.src=""
+                  vidSave.src = videoURL;
+                  console.log(videoURL);
+              }
+          })
+          .catch(function(err) {
+              console.log(err.name, err.message);
+          });
+
+        })
+
+    </script>
+
+
+<script type="text/javascript">
+
+$('#vid2').hide()
+
+$('#btnStop').hide()
+
+$('#upload').hide()
+
+$('#btnStart').click(function(e){
+  $('#btnStop').show()
+  $(this).hide()
+  $('#upload').show()
+}
+)
+
+$('#btnStop').click(function(e){
+  $('#vid1').hide()
+  $('#vid2').show()
+  $('#upload').show()
+  $(this).hide()
+  $('#btnStart').show()
+
+})
+
+
+</script>
+
+
+</body>
